@@ -48,7 +48,6 @@ export function ConnectMetamask() {
           { chainId: `0x${parseInt(THETA_MAINNET.chainId).toString(16)}` },
         ],
       })
-      toast.success('Switched to Theta Testnet')
     } catch (error: any) {
       if (error?.code === 4902) {
         try {
