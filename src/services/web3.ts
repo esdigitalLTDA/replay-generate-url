@@ -66,7 +66,7 @@ async function transferToken(
     const txResponse = await contract.transfer(toAddress, amountInWei)
     const receipt = await txResponse.wait()
 
-    return receipt.transactionHash
+    return receipt.hash
   } catch (error) {
     console.error('Error sending tokens:', error)
     throw error
