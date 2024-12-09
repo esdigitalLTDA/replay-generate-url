@@ -8,10 +8,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  THETA_MAINNET,
-  THETA_TESTNET,
-} from '@/services/constants/network-connections'
+import { THETA_MAINNET } from '@/services/constants/network-connections'
 import { addMovieToBlockchain } from '@/services/movies-service'
 import {
   CONTENT_OWNER_ID,
@@ -41,7 +38,11 @@ interface VideoDataForm {
   movieCreationTxId?: string
 }
 
-export default function VideoForm() {
+interface VideoFormProps {
+  onGenerateUrl: () => void
+}
+
+export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
   const [isLoading, setIsLoading] = useState(false)
 
   const { walletAddress } = useWalletStore()
@@ -87,33 +88,31 @@ export default function VideoForm() {
       )
 
       // todo
-      // const assetResponse = await createAsset({
-      //   thumbnail: videoData.thumbnail || '',
-      //   assetType: 'vod', // vod or live
-      //   title: videoData.title,
-      //   contentOwnerId: CONTENT_OWNER_ID,
-      //   platform: PLATFORM,
-      //   description: videoData.description,
-      //   externalAssetId: createId(),
-      //   sourceUrl: videoData.videoUrl,
-      // })
+      const assetResponse = await createAsset({
+        thumbnail: videoData.thumbnail || '',
+        assetType: 'vod', // vod or live
+        title: videoData.title,
+        contentOwnerId: CONTENT_OWNER_ID,
+        platform: PLATFORM,
+        description: videoData.description,
+        externalAssetId: createId(),
+        sourceUrl: videoData.videoUrl,
+      })
 
-      const assetId = createId()
-      if (!assetId) {
+      if (!assetResponse.id) {
         throw new Error('No one asset ID returned')
       }
 
       // todo
-      // const syndicationResponse = await createSyndicationProfile({
-      //   name: `${videoData.title} - ${PLATFORM}`,
-      //   distributorId: DISTRIBUTOR_ID,
-      //   contentOwnerId: CONTENT_OWNER_ID,
-      //   paymentProfileId: PAYMENT_PROFILE_ID,
-      //   assetId,
-      // })
+      const syndicationResponse = await createSyndicationProfile({
+        name: `${videoData.title} - ${PLATFORM}`,
+        distributorId: DISTRIBUTOR_ID,
+        contentOwnerId: CONTENT_OWNER_ID,
+        paymentProfileId: PAYMENT_PROFILE_ID,
+        assetId: assetResponse.id,
+      })
 
-      const playbackUrl =
-        'https://api-wrapper-tracking.staging.imaginereplay.com/api/v1/stream/6752b25f5d8a5c1ebcd0686d/master.m3u8?externalUserId=[USER_ID]&provider=powr&deviceId=[DEVICE_ID]&referrerUrl=[REF]&cb=[CB]&externalAssetId=[VUID]'
+      const playbackUrl = syndicationResponse.playbackUrl
       if (!playbackUrl) {
         throw new Error('No playbackUrl returned from distribution profile.')
       }
@@ -173,9 +172,23 @@ export default function VideoForm() {
         throw new Error('Error to save movie')
       }
 
+      onGenerateUrl()
+
       toast.success('Movie added successfully!')
     } catch (error: any) {
       console.error('Error processing:', error)
+
+      if (error?.message === 'Insufficient RPLAY balance.') {
+        return toast.error(error.message, {
+          action: {
+            label: 'Buy RPLAY',
+            onClick: () => {
+              window.open('https://www.mexc.com/price/RPLAY', '_blank')
+            },
+          },
+        })
+      }
+
       toast.error(error?.message || 'Failed to process the video.')
     } finally {
       setIsLoading(false)
@@ -196,27 +209,27 @@ export default function VideoForm() {
         )
       }
 
-      await web3Service.changeNetwork(THETA_TESTNET.chainId)
+      await web3Service.changeNetwork(THETA_MAINNET.chainId)
 
       const provider = await web3Service.getMetaMaskProvider()
       const signer = await provider.getSigner()
       const userAddress = await signer.getAddress()
 
-      // const userRplayBalance = await web3Service.getTokenBalance(
-      //   userAddress,
-      //   '0x2b128f8074be5ec3ca45dd6358951542e89d73a8',
-      // )
+      const userRplayBalance = await web3Service.getTokenBalance(
+        userAddress,
+        RPLAY_CONTRACT_ADDRESS,
+      )
 
-      // const userBalanceNumber = parseFloat(userRplayBalance)
+      const userBalanceNumber = parseFloat(userRplayBalance)
 
-      // if (userBalanceNumber < AMOUNT_PER_URL) {
-      //   throw new Error('Insufficient RPLAY balance.')
-      // }
+      if (userBalanceNumber < AMOUNT_PER_URL) {
+        throw new Error('Insufficient RPLAY balance.')
+      }
 
       const txHash = await web3Service.transferToken(
         TREASURE_WALLET,
         AMOUNT_PER_URL,
-        '0xfc9e9d2f17d151147e13e2f1d7790f76e249bd60',
+        RPLAY_CONTRACT_ADDRESS,
       )
 
       toast.success('Payment successful!')
