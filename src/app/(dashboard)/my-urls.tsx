@@ -32,13 +32,13 @@ export function MyUrls() {
     return `/api/movies?userAddress=${walletAddress}`
   }, [walletAddress])
 
-  const { data, isLoading } = useSWR(url, fetcher)
+  const { data, isLoading, isValidating } = useSWR(url, fetcher)
 
   if (!data?.success || !data?.data || data.data.length === 0) {
     return <div>No URLs found.</div>
   }
 
-  if (isLoading)
+  if (isLoading || isValidating)
     return (
       <div className="flex items-center gap-2">
         <span>Loading URLs</span> <Loader2 className="animate-spin" />
