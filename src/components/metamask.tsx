@@ -60,12 +60,13 @@ export function Metamask() {
       setRplayBalance(formattedBalance)
     } catch (error) {
       console.error('Error fetching RPLAY balance:', error)
-      toast.error('Failed to fetch RPLAY balance.')
     }
   }
 
   useEffect(() => {
-    fetchRplayBalance()
+    if (walletAddress) {
+      fetchRplayBalance()
+    }
   }, [walletAddress])
 
   return (

@@ -1,7 +1,7 @@
 'use server'
 
 export interface AssetData {
-  thumbnail: string
+  thumbnail: Blob
   assetType: 'vod' | 'live'
   title: string
   contentOwnerId: string
@@ -49,19 +49,22 @@ export interface SyndicationProfileResponse {
   updatedAt: string
 }
 
-const ADMIN_TOKEN = process.env.REPLAY_ADMIN_TOKEN || ''
-const BASE_URL = 'https://api-wrapper-tracking.staging.imaginereplay.com/api/v1'
+const ADMIN_TOKEN = process.env.REPLAY_ADMIN_TOKEN
+const BASE_URL = 'https://asset-management-api.imaginereplay.com'
 
-export async function createAsset(data: AssetData): Promise<AssetResponse> {
+export async function createAsset(asset: AssetData): Promise<AssetResponse> {
   const formData = new FormData()
-  formData.append('thumbnail', data.thumbnail)
-  formData.append('assetType', data.assetType)
-  formData.append('title', data.title)
-  formData.append('contentOwnerId', data.contentOwnerId)
-  formData.append('platform', data.platform)
-  formData.append('description', data.description)
-  formData.append('externalAssetId', data.externalAssetId)
-  formData.append('sourceUrl', data.sourceUrl)
+
+  const thumbnailBlob = new Blob([asset.thumbnail], { type: 'image/jpeg' })
+
+  formData.append('thumbnail', thumbnailBlob, 'thumbnail.jpg')
+  formData.append('assetType', asset.assetType)
+  formData.append('title', asset.title)
+  formData.append('contentOwnerId', asset.contentOwnerId)
+  formData.append('platform', asset.platform)
+  formData.append('description', asset.description)
+  formData.append('externalAssetId', asset.externalAssetId)
+  formData.append('sourceUrl', asset.sourceUrl)
 
   const response = await fetch(`${BASE_URL}/assets/upload`, {
     method: 'POST',
@@ -73,6 +76,8 @@ export async function createAsset(data: AssetData): Promise<AssetResponse> {
 
   if (!response.ok) {
     const errorText = await response.text()
+    console.log('errorText', errorText)
+
     throw new Error(`Failed to create asset: ${errorText}`)
   }
 

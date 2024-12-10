@@ -1,11 +1,10 @@
 /* eslint-disable camelcase */
 import { NextRequest } from 'next/server'
-import { ZodSchema } from 'zod'
 
-import { Movie } from '@/models/movie'
+import { Video } from '@/models/video'
 import { connectDb } from '@/services/database/connection'
 
-import { movieSchema } from './schemas'
+import { VideoSchema, VideoUpdateSchema } from './schema'
 
 export async function GET(req: NextRequest) {
   await connectDb()
@@ -24,15 +23,15 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const movies = await Movie.find({
+    const videos = await Video.find({
       userAddress,
     })
 
-    if (!movies || movies.length === 0) {
+    if (!videos || videos.length === 0) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'No movies found for this user',
+          error: 'No videos found for this user',
         }),
         {
           status: 404,
@@ -41,12 +40,12 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    return new Response(JSON.stringify({ success: true, data: movies }), {
+    return new Response(JSON.stringify({ success: true, data: videos }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (error: any) {
-    console.error('Error fetching movies:', error?.message)
+    console.error('Error fetching videos:', error?.message)
     return new Response(
       JSON.stringify({
         success: false,
@@ -60,23 +59,20 @@ export async function GET(req: NextRequest) {
   }
 }
 
-function validateRequest(schema: ZodSchema, data: any) {
-  try {
-    return { validData: schema.parse(data), errors: null }
-  } catch (err: any) {
-    return { validData: null, errors: err.errors }
-  }
-}
-
 export async function POST(req: NextRequest) {
   await connectDb()
 
   try {
     const body = await req.json()
 
-    const { validData, errors } = validateRequest(movieSchema, body)
+    const parseResult = VideoSchema.safeParse(body)
 
-    if (errors) {
+    if (!parseResult.success) {
+      const errors = parseResult.error.errors.map((err) => ({
+        field: err.path[0],
+        message: err.message,
+      }))
+
       return new Response(
         JSON.stringify({
           success: false,
@@ -87,15 +83,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const newMovie = new Movie(validData)
-    const savedMovie = await newMovie.save()
+    const newVideo = new Video(parseResult.data)
+    const savedVideo = await newVideo.save()
 
-    return new Response(JSON.stringify({ success: true, data: savedMovie }), {
+    return new Response(JSON.stringify({ success: true, data: savedVideo }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (error: any) {
-    console.error('Error saving movie:', error?.message)
+    console.error('Error saving video:', error?.message)
     return new Response(
       JSON.stringify({ success: false, error: 'Server Error' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } },
@@ -109,16 +105,14 @@ export async function PUT(req: NextRequest) {
   try {
     const body = await req.json()
 
-    if (!body._id) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Movie ID is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      )
-    }
+    const parseResult = VideoUpdateSchema.safeParse(body)
 
-    const { validData, errors } = validateRequest(movieSchema, body)
+    if (!parseResult.success) {
+      const errors = parseResult.error.errors.map((err) => ({
+        field: err.path[0],
+        message: err.message,
+      }))
 
-    if (errors) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -129,23 +123,25 @@ export async function PUT(req: NextRequest) {
       )
     }
 
-    const updatedMovie = await Movie.findByIdAndUpdate(body._id, validData, {
+    const { _id, ...updateData } = parseResult.data
+
+    const updatedVideo = await Video.findByIdAndUpdate(_id, updateData, {
       new: true,
     })
 
-    if (!updatedMovie) {
+    if (!updatedVideo) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Movie not found' }),
+        JSON.stringify({ success: false, error: 'Video not found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } },
       )
     }
 
-    return new Response(JSON.stringify({ success: true, data: updatedMovie }), {
+    return new Response(JSON.stringify({ success: true, data: updatedVideo }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (error: any) {
-    console.error('Error updating movie:', error?.message)
+    console.error('Error updating video:', error?.message)
     return new Response(
       JSON.stringify({ success: false, error: 'Server Error' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } },

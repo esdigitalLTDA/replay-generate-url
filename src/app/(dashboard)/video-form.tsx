@@ -1,15 +1,17 @@
 'use client'
 
+import { zodResolver } from '@hookform/resolvers/zod'
 import { createId } from '@paralleldrive/cuid2'
 import { Loader2 } from 'lucide-react'
-import { FormEvent, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
+import { VideoDataForm, VideoFormSchema } from '@/app/(dashboard)/video-schema'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { THETA_MAINNET } from '@/services/constants/network-connections'
-import { addMovieToBlockchain } from '@/services/movies-service'
+import { THETA_TESTNET } from '@/services/constants/network-connections'
 import {
   CONTENT_OWNER_ID,
   DISTRIBUTOR_ID,
@@ -22,21 +24,12 @@ import {
   createSyndicationProfile,
 } from '@/services/replay/replay-service'
 import { isHLS } from '@/services/utils'
+import {
+  addVideosToBlockchain,
+  VideoDataBlockchain,
+} from '@/services/videos-service'
 import { web3Service } from '@/services/web3'
 import { useWalletStore } from '@/state/wallet.store'
-
-interface VideoDataForm {
-  title: string
-  description: string
-  tags: string
-  thumbnail: string
-  category: string
-  publicationDate: string
-  videoUrl: string
-  wrappedUrl?: string
-  paymentTxId?: string
-  movieCreationTxId?: string
-}
 
 interface VideoFormProps {
   onGenerateUrl: () => void
@@ -44,34 +37,48 @@ interface VideoFormProps {
 
 export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
   const [isLoading, setIsLoading] = useState(false)
-
   const { walletAddress } = useWalletStore()
 
-  const [videoData, setVideoData] = useState<VideoDataForm>({
-    title: '',
-    description: '',
-    tags: '',
-    thumbnail: '',
-    category: '',
-    publicationDate: '',
-    videoUrl: '',
+  const {
+    control,
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm<VideoDataForm>({
+    resolver: zodResolver(VideoFormSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      tags: '',
+      category: '',
+      publicationDate: '',
+      videoUrl: '',
+    },
   })
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    setVideoData({ ...videoData, [e.target.name]: e.target.value })
-  }
+  useEffect(() => {
+    const savedData = localStorage.getItem('videoData')
+    if (savedData) {
+      const parsedData: VideoDataForm = JSON.parse(savedData)
+      Object.keys(parsedData).forEach((key) => {
+        setValue(
+          key as keyof VideoDataForm,
+          parsedData[key as keyof VideoDataForm] as string,
+        )
+      })
+    }
+  }, [setValue])
 
-  const handleVideoUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const url = e.target.value
-    setVideoData({ ...videoData, videoUrl: url })
-  }
+  const watchAllFields = useForm<VideoDataForm>().watch
+  useEffect(() => {
+    watchAllFields((value) => {
+      localStorage.setItem('videoData', JSON.stringify(value))
+    })
+  }, [watchAllFields])
 
-  const handleConfirm = async (e: FormEvent) => {
-    e.preventDefault()
-
-    if (!isHLS(videoData.videoUrl)) {
+  const handleConfirm = async (data: VideoDataForm) => {
+    if (!isHLS(data.videoUrl)) {
       toast.error('The URL is not a valid HLS video.')
       return
     }
@@ -79,33 +86,29 @@ export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
     try {
       setIsLoading(true)
 
-      const paymentTxId = await processPayment()
+      // const paymentTxId = await processPayment()
+      const paymentTxId = '123'
 
-      setVideoData((prevData) => ({ ...prevData, paymentTxId }))
-      localStorage.setItem(
-        'videoData',
-        JSON.stringify({ ...videoData, paymentTxId }),
-      )
+      const updatedData = { ...data, paymentTxId }
+      localStorage.setItem('videoData', JSON.stringify(updatedData))
 
-      // todo
       const assetResponse = await createAsset({
-        thumbnail: videoData.thumbnail || '',
+        thumbnail: data.thumbnail || '',
         assetType: 'vod', // vod or live
-        title: videoData.title,
+        title: data.title,
         contentOwnerId: CONTENT_OWNER_ID,
         platform: PLATFORM,
-        description: videoData.description,
+        description: data.description,
         externalAssetId: createId(),
-        sourceUrl: videoData.videoUrl,
+        sourceUrl: data.videoUrl,
       })
 
       if (!assetResponse.id) {
         throw new Error('No one asset ID returned')
       }
 
-      // todo
       const syndicationResponse = await createSyndicationProfile({
-        name: `${videoData.title} - ${PLATFORM}`,
+        name: `${data.title} - ${PLATFORM}`,
         distributorId: DISTRIBUTOR_ID,
         contentOwnerId: CONTENT_OWNER_ID,
         paymentProfileId: PAYMENT_PROFILE_ID,
@@ -113,70 +116,71 @@ export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
       })
 
       const playbackUrl = syndicationResponse.playbackUrl
+
       if (!playbackUrl) {
         throw new Error('No playbackUrl returned from distribution profile.')
       }
 
-      setVideoData((prevData) => ({ ...prevData, wrappedUrl: playbackUrl }))
+      const updatedDataWithUrl = { ...updatedData, wrappedUrl: playbackUrl }
+      localStorage.setItem('videoData', JSON.stringify(updatedDataWithUrl))
 
-      localStorage.setItem(
-        'videoData',
-        JSON.stringify({ ...videoData, wrappedUrl: playbackUrl }),
-      )
+      const blockchainVideoData: VideoDataBlockchain = {
+        ...data,
+        tags:
+          data.tags && data.tags.length > 0
+            ? data.tags.split(',').map((tag: string) => tag.trim())
+            : [],
+        creation_date: data.publicationDate,
+        replay_tracking_url: playbackUrl,
+        payment_hash: paymentTxId,
+      }
 
-      const movieCreationTxId = await addMovieToBlockchain({
+      const videoCreationTxId = await addVideosToBlockchain({
         userAddress: walletAddress!,
-        videoData: {
-          ...videoData,
-          tags: videoData?.tags?.length > 0 ? videoData.tags.split(',') : [],
-          wrappedUrl: playbackUrl,
-          paymentTxId,
-        },
+        videoData: blockchainVideoData,
       })
 
-      console.log('movieCreationTxId', movieCreationTxId)
+      console.log('videoCreationTxId', videoCreationTxId)
 
-      setVideoData((prevData) => ({
-        ...prevData,
-        movieCreationTxId,
-      }))
+      const finalData = { ...updatedDataWithUrl, videoCreationTxId }
+      localStorage.setItem('videoData', JSON.stringify(finalData))
 
-      localStorage.setItem(
-        'videoData',
-        JSON.stringify({ ...videoData, movieCreationTxId }),
-      )
-
-      const response = await fetch('/api/movies', {
+      const response = await fetch('/api/videos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           // email: userEmail,
-          payment_TX_ID: paymentTxId,
-          movie_creation_TX_ID: movieCreationTxId,
+          payment_hash: paymentTxId,
+          video_creation_hash: videoCreationTxId,
           userAddress: walletAddress,
-          title: videoData.title,
-          description: videoData.description,
-          tags: videoData?.tags?.length > 0 ? videoData.tags.split(',') : [],
-          thumbnails: videoData.thumbnail,
-          category: videoData.category,
-          creation_date: videoData.publicationDate,
-          REPLAY_TRACKING_URL: playbackUrl,
-          TX_ID: paymentTxId,
+          title: data.title,
+          description: data.description,
+          tags:
+            data.tags && data.tags.length > 0
+              ? data.tags.split(',').map((tag: string) => tag.trim())
+              : [],
+          thumbnail: data.thumbnail,
+          category: data.category,
+          creation_date: data.publicationDate,
+          replay_tracking_url: playbackUrl,
           is_active: true,
         }),
       })
 
       if (!response.ok) {
-        throw new Error('Error to save movie')
+        throw new Error('Error to save video')
       }
 
+      localStorage.removeItem('videoData')
       onGenerateUrl()
 
-      toast.success('Movie added successfully!')
+      toast.success('video added successfully!')
     } catch (error: any) {
-      console.error('Error processing:', error)
+      if (error?.action === 'sendTransaction' && error?.reason === 'rejected') {
+        return
+      }
 
       if (error?.message === 'Insufficient RPLAY balance.') {
         return toast.error(error.message, {
@@ -209,7 +213,7 @@ export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
         )
       }
 
-      await web3Service.changeNetwork(THETA_MAINNET.chainId)
+      await web3Service.changeNetwork(THETA_TESTNET.chainId)
 
       const provider = await web3Service.getMetaMaskProvider()
       const signer = await provider.getSigner()
@@ -222,6 +226,8 @@ export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
 
       const userBalanceNumber = parseFloat(userRplayBalance)
 
+      console.log('userBalanceNumber', userBalanceNumber)
+
       if (userBalanceNumber < AMOUNT_PER_URL) {
         throw new Error('Insufficient RPLAY balance.')
       }
@@ -232,7 +238,7 @@ export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
         RPLAY_CONTRACT_ADDRESS,
       )
 
-      toast.success('Payment successful!')
+      console.log('transferToken', txHash)
 
       return txHash
     } catch (error: any) {
@@ -241,92 +247,116 @@ export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
     }
   }
 
-  useEffect(() => {
-    const savedData = localStorage.getItem('videoData')
-    if (savedData) {
-      setVideoData(JSON.parse(savedData))
-    }
-  }, [])
-
-  useEffect(() => {
-    localStorage.setItem('videoData', JSON.stringify(videoData))
-  }, [videoData])
-
   return (
     <div className="flex w-full flex-col items-center justify-center">
-      <form className="w-[600px] space-y-4">
+      <form
+        className="w-[600px] space-y-4"
+        onSubmit={handleSubmit(handleConfirm)}
+      >
         <div>
           <label className="mb-1 block font-semibold">Video Title *</label>
           <Input
-            name="title"
-            value={videoData.title}
-            onChange={handleChange}
+            {...register('title')}
             required
             placeholder="Enter video title"
           />
+          {errors.title && (
+            <p className="mt-1.5 text-sm text-red-500">
+              {errors.title.message}
+            </p>
+          )}
         </div>
         <div>
           <label className="mb-1 block font-semibold">
             Video Description *
           </label>
           <Textarea
-            name="description"
-            value={videoData.description}
-            onChange={handleChange}
+            {...register('description')}
             required
             placeholder="Enter video description"
           />
+          {errors.description && (
+            <p className="mt-1.5 text-sm text-red-500">
+              {errors.description.message}
+            </p>
+          )}
         </div>
         <div>
           <label className="mb-1 block font-semibold">Video URL *</label>
           <Input
-            name="videoUrl"
-            value={videoData.videoUrl}
-            onChange={handleVideoUrlChange}
+            {...register('videoUrl')}
             required
             placeholder="Enter video URL (HLS only)"
           />
+          {errors.videoUrl && (
+            <p className="mt-1.5 text-sm text-red-500">
+              {errors.videoUrl.message}
+            </p>
+          )}
         </div>
         <div>
           <label className="mb-1 block font-semibold">Tags</label>
           <Input
-            name="tags"
-            value={videoData.tags}
-            onChange={handleChange}
+            {...register('tags')}
             placeholder="Enter tags separated by commas"
           />
         </div>
         <div>
-          <label className="mb-1 block font-semibold">Custom Thumbnail</label>
-          <Input
+          <label className="mb-1 block font-semibold">
+            Thumbnail Personalized
+          </label>
+          <Controller
             name="thumbnail"
-            value={videoData.thumbnail}
-            onChange={handleChange}
-            placeholder="Enter thumbnail URL"
+            control={control}
+            defaultValue={null}
+            render={({ field }) => (
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const files = e.target.files
+                  console.log(files)
+
+                  if (files && files.length > 0) {
+                    files[0].arrayBuffer().then((buffer) => {
+                      setValue('thumbnail', buffer)
+                    })
+                  }
+
+                  field.onChange(e.target.files)
+                }}
+                className="mb-1 block"
+              />
+            )}
           />
+          {/* {errors.thumbnail && (
+            <p className="mt-1.5 text-sm text-red-500">
+              {errors.thumbnail.message}
+            </p>
+          )} */}
         </div>
+
         <div>
           <label className="mb-1 block font-semibold">Category</label>
-          <Input
-            name="category"
-            value={videoData.category}
-            onChange={handleChange}
-            placeholder="Enter category"
-          />
+          <Input {...register('category')} placeholder="Enter category" />
+          {errors.category && (
+            <p className="mt-1.5 text-sm text-red-500">
+              {errors.category.message}
+            </p>
+          )}
         </div>
         <div>
           <label className="mb-1 block font-semibold">Publication Date</label>
-          <Input
-            type="date"
-            name="publicationDate"
-            value={videoData.publicationDate}
-            onChange={handleChange}
-          />
+          <Input type="date" {...register('publicationDate')} />
+          {errors.publicationDate && (
+            <p className="mt-1.5 text-sm text-red-500">
+              {errors.publicationDate.message}
+            </p>
+          )}
         </div>
 
         <Button
           type="submit"
-          onClick={handleConfirm}
           className="mt-3 h-12 w-full font-semibold"
           disabled={isLoading}
         >

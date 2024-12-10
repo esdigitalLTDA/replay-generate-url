@@ -10,6 +10,7 @@
     "test:watch": "jest --watch"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.9.1",
     "@paralleldrive/cuid2": "^2.2.2",
     "@radix-ui/react-alert-dialog": "^1.0.5",
     "@radix-ui/react-checkbox": "^1.0.4",
@@ -30,6 +31,7 @@
     "react": "19.0.0-rc.1",
     "react-blockies": "^1.4.1",
     "react-dom": "19.0.0-rc.1",
+    "react-hook-form": "^7.54.0",
     "sonner": "^1.4.41",
     "swr": "^2.2.5",
     "tailwind-merge": "^2.2.2",

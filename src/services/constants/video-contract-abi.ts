@@ -1,79 +1,4 @@
-export const MOVIES_CONTRACT_ABI = [
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'user',
-        type: 'address',
-      },
-      {
-        indexed: false,
-        internalType: 'string',
-        name: 'title',
-        type: 'string',
-      },
-      {
-        indexed: false,
-        internalType: 'string',
-        name: 'TX_ID',
-        type: 'string',
-      },
-    ],
-    name: 'MovieAdded',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'user',
-        type: 'address',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'index',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'bool',
-        name: 'is_active',
-        type: 'bool',
-      },
-    ],
-    name: 'MovieStatusToggled',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'user',
-        type: 'address',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'index',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'string',
-        name: 'title',
-        type: 'string',
-      },
-    ],
-    name: 'MovieUpdated',
-    type: 'event',
-  },
+export const VIDEOS_CONTRACT_ABI = [
   {
     anonymous: false,
     inputs: [
@@ -120,6 +45,81 @@ export const MOVIES_CONTRACT_ABI = [
     type: 'event',
   },
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'user',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'string',
+        name: 'title',
+        type: 'string',
+      },
+      {
+        indexed: false,
+        internalType: 'string',
+        name: 'payment_hash',
+        type: 'string',
+      },
+    ],
+    name: 'VideoAdded',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'user',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'index',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'bool',
+        name: 'is_active',
+        type: 'bool',
+      },
+    ],
+    name: 'VideoStatusToggled',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'user',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'index',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'string',
+        name: 'title',
+        type: 'string',
+      },
+    ],
+    name: 'VideoUpdated',
+    type: 'event',
+  },
+  {
     inputs: [
       {
         internalType: 'address',
@@ -160,21 +160,21 @@ export const MOVIES_CONTRACT_ABI = [
           },
           {
             internalType: 'string',
-            name: 'REPLAY_TRACKING_URL',
+            name: 'replay_tracking_url',
             type: 'string',
           },
           {
             internalType: 'string',
-            name: 'TX_ID',
+            name: 'payment_hash',
             type: 'string',
           },
         ],
-        internalType: 'struct UserMovies.MovieData',
+        internalType: 'struct UserVideos.VideoData',
         name: 'data',
         type: 'tuple',
       },
     ],
-    name: 'addMovie',
+    name: 'addVideo',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
@@ -187,7 +187,7 @@ export const MOVIES_CONTRACT_ABI = [
         type: 'address',
       },
     ],
-    name: 'getMoviesByUser',
+    name: 'getVideosByUser',
     outputs: [
       {
         components: [
@@ -223,12 +223,12 @@ export const MOVIES_CONTRACT_ABI = [
           },
           {
             internalType: 'string',
-            name: 'REPLAY_TRACKING_URL',
+            name: 'replay_tracking_url',
             type: 'string',
           },
           {
             internalType: 'string',
-            name: 'TX_ID',
+            name: 'payment_hash',
             type: 'string',
           },
           {
@@ -237,7 +237,7 @@ export const MOVIES_CONTRACT_ABI = [
             type: 'bool',
           },
         ],
-        internalType: 'struct UserMovies.Movie[]',
+        internalType: 'struct UserVideos.Video[]',
         name: '',
         type: 'tuple[]',
       },
@@ -369,21 +369,21 @@ export const MOVIES_CONTRACT_ABI = [
           },
           {
             internalType: 'string',
-            name: 'REPLAY_TRACKING_URL',
+            name: 'replay_tracking_url',
             type: 'string',
           },
           {
             internalType: 'string',
-            name: 'TX_ID',
+            name: 'payment_hash',
             type: 'string',
           },
         ],
-        internalType: 'struct UserMovies.MovieData',
+        internalType: 'struct UserVideos.VideoData',
         name: 'data',
         type: 'tuple',
       },
     ],
-    name: 'updateMovie',
+    name: 'updateVideo',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

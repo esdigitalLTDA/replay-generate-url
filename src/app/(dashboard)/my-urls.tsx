@@ -13,23 +13,17 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { fetcher } from '@/lib/utils'
+import { IVideo } from '@/models/video'
 import { useWalletStore } from '@/state/wallet.store'
 
-interface Movie {
-  _id: string
-  title: string
-  description: string
-  REPLAY_TRACKING_URL: string
-  payment_TX_ID: string
-  creation_date: string
-}
+import { EditVideoForm } from './edit-video-form'
 
 export function MyUrls() {
   const { walletAddress } = useWalletStore()
 
   const url = useMemo(() => {
     if (!walletAddress) return null
-    return `/api/movies?userAddress=${walletAddress}`
+    return `/api/videos?userAddress=${walletAddress}`
   }, [walletAddress])
 
   const { data, isLoading, isValidating } = useSWR(url, fetcher)
@@ -49,7 +43,7 @@ export function MyUrls() {
     return <div>No URLs found.</div>
   }
 
-  const urls: Movie[] = data.data
+  const urls: IVideo[] = data.data
 
   return (
     <div>
@@ -59,25 +53,27 @@ export function MyUrls() {
             <TableHead>Title</TableHead>
             <TableHead>Replay Tracking URL</TableHead>
             {/* <TableHead>Transaction Hash</TableHead> */}
-            <TableHead className="text-right">Creation Date</TableHead>
+            <TableHead>Creation Date</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {urls.map((movie) => (
-            <TableRow key={movie._id}>
-              <TableCell className="font-medium">{movie.title}</TableCell>
+          {urls.map((video) => (
+            <TableRow key={String(video._id)}>
+              <TableCell className="font-medium">{video.title}</TableCell>
               <TableCell>
                 <a
-                  href={movie.REPLAY_TRACKING_URL}
+                  href={video.replay_tracking_url}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  {movie.REPLAY_TRACKING_URL}
+                  {video.replay_tracking_url}
                 </a>
               </TableCell>
-              {/* <TableCell>{movie.payment_TX_ID}</TableCell> */}
+              {/* <TableCell>{video.payment_hash}</TableCell> */}
+              <TableCell>{video.creation_date}</TableCell>
+
               <TableCell className="text-right">
-                {movie.creation_date}
+                <EditVideoForm video={video} onSave={() => {}} />
               </TableCell>
             </TableRow>
           ))}
