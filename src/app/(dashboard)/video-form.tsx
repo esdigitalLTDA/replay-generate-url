@@ -11,7 +11,7 @@ import { VideoDataForm, VideoFormSchema } from '@/app/(dashboard)/video-schema'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { ETHEREUM_MAINNET } from '@/services/constants/network-connections'
+import { THETA_MAINNET } from '@/services/constants/network-connections'
 import {
   CONTENT_OWNER_ID,
   DISTRIBUTOR_ID,
@@ -194,7 +194,7 @@ export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
         )
       }
 
-      await web3Service.changeNetwork(ETHEREUM_MAINNET.chainId)
+      await web3Service.changeNetwork(THETA_MAINNET.chainId)
 
       const provider = await web3Service.getMetaMaskProvider()
       const signer = await provider.getSigner()

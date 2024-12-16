@@ -4,7 +4,7 @@ import { ethers } from 'ethers'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 
-import { ETHEREUM_MAINNET } from '@/services/constants/network-connections'
+import { THETA_MAINNET } from '@/services/constants/network-connections'
 import { STORAGE_KEYS, StorageHelper } from '@/services/storage-helper'
 import { useWalletStore } from '@/state/wallet.store'
 
@@ -45,7 +45,7 @@ export function ConnectMetamask() {
       await ethereum.request({
         method: 'wallet_switchEthereumChain',
         params: [
-          { chainId: `0x${parseInt(ETHEREUM_MAINNET.chainId).toString(16)}` },
+          { chainId: `0x${parseInt(THETA_MAINNET.chainId).toString(16)}` },
         ],
       })
     } catch (error: any) {
@@ -55,15 +55,15 @@ export function ConnectMetamask() {
             method: 'wallet_addEthereumChain',
             params: [
               {
-                chainId: `0x${parseInt(ETHEREUM_MAINNET.chainId).toString(16)}`,
-                chainName: ETHEREUM_MAINNET.name,
+                chainId: `0x${parseInt(THETA_MAINNET.chainId).toString(16)}`,
+                chainName: THETA_MAINNET.name,
                 nativeCurrency: {
-                  name: ETHEREUM_MAINNET.symbol,
-                  symbol: ETHEREUM_MAINNET.symbol,
+                  name: THETA_MAINNET.symbol,
+                  symbol: THETA_MAINNET.symbol,
                   decimals: 18,
                 },
-                rpcUrls: [ETHEREUM_MAINNET.rpcUrl],
-                blockExplorerUrls: [ETHEREUM_MAINNET.blockExplorerUrl],
+                rpcUrls: [THETA_MAINNET.rpcUrl],
+                blockExplorerUrls: [THETA_MAINNET.blockExplorerUrl],
               },
             ],
           })
@@ -104,7 +104,7 @@ export function ConnectMetamask() {
           method: 'eth_chainId',
         })
 
-        if (Number(currentChainId) !== Number(ETHEREUM_MAINNET.chainId)) {
+        if (Number(currentChainId) !== Number(THETA_MAINNET.chainId)) {
           return await switchToEthereumNewtwokr()
         }
       } catch (error: any) {
