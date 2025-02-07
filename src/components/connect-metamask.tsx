@@ -39,7 +39,7 @@ export function ConnectMetamask() {
     }
   }
 
-  async function switchToEthereumNewtwokr() {
+  async function switchToEthereumNewtwork() {
     try {
       const ethereum = window.ethereum
       await ethereum.request({
@@ -67,14 +67,13 @@ export function ConnectMetamask() {
               },
             ],
           })
-          toast.success('Theta Testnet added to MetaMask and switched.')
         } catch (addError) {
-          console.error('Error adding Theta Testnet:', addError)
-          toast.error('Failed to add Theta Testnet to MetaMask.')
+          console.error('Error adding Theta Network:', addError)
+          toast.error('Failed to add Theta Network to MetaMask.')
         }
       } else {
         console.error('Error switching network:', error)
-        toast.error('Failed to switch to Theta Testnet.')
+        toast.error('Failed to switch to Theta Network.')
       }
     }
   }
@@ -105,7 +104,7 @@ export function ConnectMetamask() {
         })
 
         if (Number(currentChainId) !== Number(THETA_MAINNET.chainId)) {
-          return await switchToEthereumNewtwokr()
+          return await switchToEthereumNewtwork()
         }
       } catch (error: any) {
         console.error('Error connecting to MetaMask:', error)
