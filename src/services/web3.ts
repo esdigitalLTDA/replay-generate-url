@@ -1,6 +1,10 @@
 import { ethers } from 'ethers'
 
-import { NETWORK_CONNECTIONS } from './constants/network-connections'
+import {
+  ETHEREUM_MAINNET,
+  NETWORK_CONNECTIONS,
+  THETA_MAINNET,
+} from './constants/network-connections'
 import { TOKEN_CONTRACT_ABI } from './constants/token-contract-abi'
 
 const CONTRACT_ABI = [
@@ -39,6 +43,16 @@ async function getTokenBalance(
   const contract = new ethers.Contract(contractAddress, CONTRACT_ABI, provider)
   const balance = await contract.balanceOf(address)
   return ethers.formatUnits(balance, decimals)
+}
+
+function getDefaultBlockchain() {
+  const blockchain = process.env.NEXT_PUBLIC_BLOCKCHAIN
+
+  if (blockchain === 'theta') {
+    return THETA_MAINNET
+  } else {
+    return ETHEREUM_MAINNET
+  }
 }
 
 async function getTransaction(hash: string) {
@@ -94,7 +108,7 @@ async function changeNetwork(chainId: string) {
       )
 
       if (!networkConnection) {
-        return
+        throw new Error(`Network with chainId ${chainId} not found.`)
       }
 
       try {
@@ -103,8 +117,14 @@ async function changeNetwork(chainId: string) {
           params: [
             {
               chainId: hexChainId,
-              rpcUrls: [networkConnection.rpcUrl],
               chainName: networkConnection.name,
+              rpcUrls: [networkConnection.rpcUrl],
+              nativeCurrency: {
+                name: networkConnection.symbol,
+                symbol: networkConnection.symbol,
+                decimals: 18,
+              },
+              blockExplorerUrls: [networkConnection?.blockExplorerUrl || ''],
             },
           ],
         })
@@ -125,4 +145,5 @@ export const web3Service = {
   getTransaction,
   getCurrentNetwork,
   changeNetwork,
+  getDefaultBlockchain,
 }

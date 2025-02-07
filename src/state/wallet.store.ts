@@ -1,4 +1,3 @@
-// useUserStore.ts
 import { create } from 'zustand'
 
 interface OrderPending {
@@ -11,6 +10,9 @@ interface OrderPending {
 interface CurrentNetwork {
   name: string
   chainId: string
+  rpcUrl?: string
+  symbol?: string
+  blockExplorerUrl?: string
 }
 
 interface WalletState {
@@ -34,6 +36,6 @@ export const useWalletStore = create<WalletState>((set) => ({
   setIncompatibleNetwork: (isIncompatible) =>
     set({ isIncompatibleNetwork: isIncompatible }),
   setCurrentNetwork: (network) => set({ currentNetwork: network }),
-  setOrderPending: (order: OrderPending) => set({ orderPending: order }),
+  setOrderPending: (order) => set({ orderPending: order }),
   removeOrderPending: () => set({ orderPending: null }),
 }))

@@ -4,14 +4,17 @@ import { ethers } from 'ethers'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 
-import { THETA_MAINNET } from '@/services/constants/network-connections'
 import { STORAGE_KEYS, StorageHelper } from '@/services/storage-helper'
+import { web3Service } from '@/services/web3'
 import { useWalletStore } from '@/state/wallet.store'
 
 import { Button } from './ui/button'
 
 export function ConnectMetamask() {
-  const { setWalletAddress, walletAddress } = useWalletStore()
+  const { setWalletAddress, walletAddress, setCurrentNetwork } =
+    useWalletStore()
+
+  const defaultNetwork = web3Service.getDefaultBlockchain()
 
   const walletAddressStorage = StorageHelper.getItem(STORAGE_KEYS.USER_WALLET)
 
@@ -39,45 +42,6 @@ export function ConnectMetamask() {
     }
   }
 
-  async function switchToEthereumNewtwork() {
-    try {
-      const ethereum = window.ethereum
-      await ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [
-          { chainId: `0x${parseInt(THETA_MAINNET.chainId).toString(16)}` },
-        ],
-      })
-    } catch (error: any) {
-      if (error?.code === 4902) {
-        try {
-          await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [
-              {
-                chainId: `0x${parseInt(THETA_MAINNET.chainId).toString(16)}`,
-                chainName: THETA_MAINNET.name,
-                nativeCurrency: {
-                  name: THETA_MAINNET.symbol,
-                  symbol: THETA_MAINNET.symbol,
-                  decimals: 18,
-                },
-                rpcUrls: [THETA_MAINNET.rpcUrl],
-                blockExplorerUrls: [THETA_MAINNET.blockExplorerUrl],
-              },
-            ],
-          })
-        } catch (addError) {
-          console.error('Error adding Theta Network:', addError)
-          toast.error('Failed to add Theta Network to MetaMask.')
-        }
-      } else {
-        console.error('Error switching network:', error)
-        toast.error('Failed to switch to Theta Network.')
-      }
-    }
-  }
-
   async function connectToMetaMask() {
     if ((window as any).ethereum) {
       try {
@@ -85,26 +49,27 @@ export function ConnectMetamask() {
           method: 'eth_requestAccounts',
         })
 
-        const walletAddress = accounts[0]
+        const _walletAddress = accounts[0]
 
         const signature = await signWallet()
-
         if (!signature) {
           toast.error(
-            'Signature for the message was denied. You must sign the message to proceed with the bridging process.',
+            'Signature for the message was denied. You must sign the message to proceed.',
           )
           return
         }
 
-        StorageHelper.setItem(STORAGE_KEYS.USER_WALLET, walletAddress)
-        setWalletAddress(walletAddress)
+        StorageHelper.setItem(STORAGE_KEYS.USER_WALLET, _walletAddress)
+        setWalletAddress(_walletAddress)
 
-        const currentChainId = await window.ethereum.request({
+        const currentChainId = await (window as any).ethereum.request({
           method: 'eth_chainId',
         })
 
-        if (Number(currentChainId) !== Number(THETA_MAINNET.chainId)) {
-          return await switchToEthereumNewtwork()
+        if (parseInt(currentChainId, 16) !== parseInt(defaultNetwork.chainId)) {
+          await web3Service.changeNetwork(defaultNetwork.chainId)
+
+          setCurrentNetwork(defaultNetwork)
         }
       } catch (error: any) {
         console.error('Error connecting to MetaMask:', error)

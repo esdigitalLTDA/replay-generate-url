@@ -11,7 +11,6 @@ import { VideoDataForm, VideoFormSchema } from '@/app/(dashboard)/video-schema'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { THETA_MAINNET } from '@/services/constants/network-connections'
 import {
   CONTENT_OWNER_ID,
   DISTRIBUTOR_ID,
@@ -35,7 +34,7 @@ interface VideoFormProps {
 
 export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const { walletAddress } = useWalletStore()
+  const { walletAddress, currentNetwork } = useWalletStore()
 
   const AMOUNT_PER_URL = parseFloat(
     process.env.NEXT_PUBLIC_AMOUNT_PER_URL_TRACKING || '1',
@@ -191,7 +190,9 @@ export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
         )
       }
 
-      await web3Service.changeNetwork(THETA_MAINNET.chainId)
+      const networkToUse = currentNetwork ?? web3Service.getDefaultBlockchain()
+
+      await web3Service.changeNetwork(networkToUse.chainId)
 
       const provider = await web3Service.getMetaMaskProvider()
       const signer = await provider.getSigner()

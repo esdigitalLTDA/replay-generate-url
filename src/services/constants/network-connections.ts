@@ -19,6 +19,7 @@ export const BASE = {
   rpcUrl: 'https://sepolia.base.org',
   chainId: '84532',
   symbol: 'ETH',
+  blockExplorerUrl: 'https://basescan.org/',
 }
 
 export const campNetworkTestnet = {
