@@ -37,6 +37,11 @@ export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const { walletAddress } = useWalletStore()
 
+  const AMOUNT_PER_URL = parseFloat(
+    process.env.NEXT_PUBLIC_AMOUNT_PER_URL_TRACKING || '1',
+  )
+  const TREASURE_WALLET = process.env.NEXT_PUBLIC_TREASURE_WALLET
+
   const defaultValues = useMemo(() => {
     const savedData = localStorage.getItem('videoData')
     return savedData
@@ -133,7 +138,6 @@ export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          // email: userEmail,
           payment_hash: paymentTxId,
           video_creation_hash: videoCreationTxId,
           userAddress: walletAddress,
@@ -152,12 +156,11 @@ export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
       })
 
       if (!response.ok) {
-        throw new Error('Error to save video')
+        throw new Error('Failed to save video')
       }
 
       onGenerateUrl()
-
-      toast.success('video added successfully!')
+      toast.success('Video added successfully!')
     } catch (error: any) {
       if (error?.action === 'sendTransaction' && error?.reason === 'rejected') {
         return
@@ -182,12 +185,6 @@ export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
 
   const processPayment = async () => {
     try {
-      const AMOUNT_PER_URL = parseFloat(
-        process.env.NEXT_PUBLIC_AMOUNT_PER_URL_TRACKING || '1',
-      )
-
-      const TREASURE_WALLET = process.env.NEXT_PUBLIC_TREASURE_WALLET
-
       if (!AMOUNT_PER_URL || !TREASURE_WALLET) {
         throw new Error(
           'Invalid payment configuration. Check your environment variables.',
@@ -237,6 +234,7 @@ export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
             <p className="mt-2 text-sm text-red-500">{errors.title.message}</p>
           )}
         </div>
+
         <div>
           <label className="mb-1 block font-semibold">
             Video Description *
@@ -251,6 +249,7 @@ export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
             </p>
           )}
         </div>
+
         <div>
           <label className="mb-1 block font-semibold">Video URL *</label>
           <Input
@@ -265,7 +264,7 @@ export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
         </div>
 
         <div>
-          <label className="mb-1 block font-semibold">Custom Thumbnail *</label>
+          <label className="mb-1 block font-semibold">Thumbnail Url *</label>
           <Input
             {...register('thumbnail')}
             placeholder="Enter the URL of the thumbnail"
@@ -293,6 +292,12 @@ export default function VideoForm({ onGenerateUrl }: VideoFormProps) {
               {errors.category.message}
             </p>
           )}
+        </div>
+
+        <div className="mt-2 rounded-lg border p-3 text-sm text-muted-foreground">
+          <p>
+            <strong>Cost per URL generation:</strong> {AMOUNT_PER_URL} RPLAY
+          </p>
         </div>
 
         <Button
